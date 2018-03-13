@@ -1,0 +1,43 @@
+CASTRO MENESES VICTOR ERNESTO
+LAS MODIFICACIONES EN MINIUM.S FUERON EN VEZ DE COMPARAR CMPL %EBX,%EAX (EBX>=EAX)
+AHORA SE COMPARA CMPL %EAX,%EBX (EAX>=EBX) DE SER VERDAD SALTA AL INICIO DE LA SECCION
+DE LO CONTRARIO PASA EL VALOR DEL REGISTRO EAX AL REGISTRO EBX QUE TENDRA EL VALOR DE RETORNO
+
+LA SEGUNDA MODIFICACION FUE QUE EN VEZ DE TERMINAR EN EL CERO TERMINE EN EL 255 QUE ES EL VALOR
+MAS GRANDE QUE PUEDE TOMAR NUESTRA VARIABLE ASI NOS ASEGURAMOS QUE EL VALOR QUE IMPRIMA EN REALIDAD SEA 
+EL MAS PEQUENO, YA QUE SI DEJAMOS EL CERO COMO ELEMENTO DE TERMINACION ELS ITEMA SIEMPRE ARROJARA
+DICHO VALOR Y NO EL MAS PEQUENO BUSCADO.
+~                                                                                                            
+Las modificaciones en dirfin.s fueron que en vez de comparar un cero o el 255 con el numero actual 
+ahora se compara el contador %edi el cual va incrementando su valor en cada iteracion. se escogio
+el numero 14 ya que la longitud de nuestro vector es de 14.
+
+Conclusiones:
+	Se pudo notar que el signo de "$" seguido de un numero hace referencia al numero, sino se coloca el
+	signo de "$" hace referencia a la localidad de memoria, de forma contraria para referirnos a una
+	variable se hace sin "$" pero para referirnos a la localidad de memoria de una variable si se 
+	emplea, %eax se refiere al valor guardado en el registro eax.
+	%edi se emplea como puntero a nuesto vector, cuyo indice va incrementando con cada iteracion
+	por lo que tambien lo pudimos usar como contador en esta practica.                                                                                                           
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                                                            
+~                                                                           
