@@ -1,0 +1,152 @@
+RTAI Installation Complete Guide
+SOFTWARE
+Sistema operativo - Xubuntu Linux 7.04. Esta es una distribución muy ligera que usa Xfce como administrador de escritorio. Funcionará muy bien en computadoras viejas como la que utilicé.
+• Compilación: gcc v3.4, g ++ v3.4 y make. Para verificar su versión de gcc y g ++, simplemente abre una terminal y escribe,
+$ gcc --version
+$ g ++ --version
+que imprimirá la versión de estos programas. Desanimo el uso de versiones inferiores a las recomendados. Escriba lo siguiente en una terminal,
+sudo -s
+que le permitirá perder el tiempo con privilegios de superusuario a través de la instalación proceso. Ahora, para obtener los paquetes mencionados anteriormente, escriba lo siguiente,
+# apt-get install gcc-3.4 g ++ - 3.4 make
+
+Siempre utilicé la versión recomendada de gcc y g ++, que funcionan perfectamente. No se preocupe si ya tiene instalada la versión 4.1.3 o superior en su sistema. Cuando realiza el comando aptget anterior, el administrador de paquetes instala la versión más baja en / usr / bin, pero deja la última versión disponible y ejecutándose como predeterminada. Para usar las versiones recomendadas, deberá especificarlo en la etapa de compilación, como lo veremos. Por cierto, si utiliza versiones más recientes de estos paquetes con éxito, infórmeme para que pueda actualizar el texto y afirmar con absoluta certeza que funcionan.
+• Menú básico de configuración del kernel - libncurses5-dev. Este paquete instala las bibliotecas de Curses necesarias que necesitaremos para ejecutar el menú de configuración del kernel. Simplemente escribe:
+# apt-get install libncurses5-dev
+• Módulo cargador - module-init-tools. Estas herramientas serán necesarias para cargar los módulos kernel .ko, como el rtai hal.ko. Hazlo escribiendo lo siguiente:
+# apt-get install module-init-tools
+• Versión RTAI - 3.5. Esta es la versión más nueva de RTAI hasta ahora, y tiene parches para la versión reciente del núcleo 2.6.19. Para obtener este software, primero ingrese el directorio de origen de su
+Distribución de Linux:
+# cd / usr / src
+Ahora, obtenga el archivo tar de RTAI en esta misma carpeta,
+# wget --no-check-certificate https://www.rtai.org/RTAI/rtai-3.5.tar.bz2
+y desempaquetar el tarball,
+# tar xvf rtai-3.5.tar.bz2
+que crea la carpeta rtai-3.5.tar.bz2 en su directorio / usr / src.
+Vanilla2 Kernel - 2.6.19. Esta es la versión más reciente del kernel compatible con RTAI 3.5. La versión reciente 2.6.X posee muy buenas características que mejoran la capacidad de respuesta de la tarea, por lo que se desaconseja el uso de versiones anteriores. El Kernel vainilla es una versión limpia de las fuentes del kernel, que no poseen ninguna configuración. Estos se usarán para construir nuestro propio kernel personalizado. Para obtener el vainilla, primero salte al directorio de fuentes,
+# cd / usr / src
+y obtener el tarball de los servidores kernel.org:
+# wget http://www.kernel.org/pub/linux/kernel/v2.6/linux-2.6.19.tar.gz
+Después de que se complete la descarga de la fuente del kernel, descomprima el archivo tarball3,
+# tar xvf linux-2.6.19.tar.gz
+que desempaqueta las fuentes del kernel en la carpeta /usr/src/linux-2.6.19. En este punto, tiene una versión limpia de las fuentes del núcleo con la versión 2.6.19.
+Apply RTAI patch
+Ahora que tenemos las herramientas necesarias, podemos comenzar a trabajar. Los ajustes del kernel de RTAI se aplican a nuestro kernel de vanilla, por lo que luego pueden admitir la capa de kernel de RTAI. Para hacerlo, ingrese la carpeta de sus fuentes de kernel vanilla,
+# cd /usr/src/linux-2.6.19
+y aplica el parche.
+# patch -p1 -b <../rtai-3.5/base/arch/i386/patches/hal-linux-2.6.19-i386-1.7-01.patch
+Puede usar la tecla TAB para completar automáticamente los comandos en el caparazón. Después de esto, varias líneas mostrarán que se está aplicando el ajuste.
+Configuring the Kernel
+Me resultó difícil comprender completamente algunas opciones del menú de configuración del kernel. Como necesitaba un kernel ligero para mi sistema integrado, necesitaba eliminar muchas opciones predeterminadas que venían de forma predeterminada con la versión del kernel de Xubuntu. Por ejemplo, si instala un Ubuntu nuevo en una PC de escritorio, el kernel viene preparado por defecto para cargar los módulos portátiles Toshiba y Dell. ¿Para qué?
+Para este paso, deberá reconocer su hardware. Le indicaré que configure el kernel vanilla en una PC de escritorio, que también puede ser útil para computadoras portátiles. Para este último caso, preste atención a los módulos específicos de portátiles que se presentarán.
+Primero, deberá guardar su archivo de configuración actual del kernel. La mayoría de las distribuciones de Linux almacenan una copia de este archivo, que nos ayudará con una configuración inicial. Por lo tanto, ingrese en la carpeta fuente del kernel de vanilla si está en otro lugar,
+# cd /usr/src/linux-2.6.19
+y haga una copia del archivo de configuración existente a la carpeta raíz de su fuente de kernel vanilla.
+# cp /boot/config-2.6.19-generic .config
+Lets finally run the kernel configuration menú
+# make menuconfig CC=/usr/bin/gcc-3.4 CXX=/usr/bin/g++-3.4
+Aparecerá el menú basado en Curses. Ahora carguemos el archivo de configuración completo que guardamos como .config seleccionando la opción "Cargar un archivo de configuración alternativa" y escribiendo .config, si aún no está predeterminado. En este punto, cargamos la configuración del kernel de la instalación predeterminada de Linux que se está ejecutando en su sistema. Hagamos los cambios necesarios.
+The configuration
+No he encontrado una guía completa y de trabajo sobre este paso. En cada guía, faltaba algo, lo que me obligaba a compilar el kernel varias veces porque una u otra opción no estaba o estaba marcada incorrectamente. Por lo tanto, aquí voy a indicar todas las opciones de configuración que utilicé. ¡Las opciones REALMENTE importantes necesarias para que RTAI funcione sin (afortunadamente) tener que recompilar el kernel están marcadas con un “! ¡". Explicaré las opciones más relevantes y declararé SOLAMENTE las que marqué. De vuelta al menú de configuración del núcleo, haga lo siguiente:
+Code maturity level options -> – Nothing selected 
+• General Setup -> – [*] Support for paging of anonymous memory (swap) – Support for swap (virtual memory).
+– [*] System V IPC – Allows Inter Process Communication.
+ – [*] BSD Process Accounting – Allows to obtain user application information’s.
+• Loadable Module Support -> – 
+!![*] Enable loadable module support – Allows to load modules to the kernel with the loading tools.
+ – [*] Module unloading.
+ – [*] Source checksum for all modules.
+ – [*] Automatic Kernel module loading . 
+• Block Layer -> – Nothing selected 
+• Processor type and features -> – [*] Generic x86 support – Better kernel performance on x86 architecture CPU’s. – [*] Preempt The Big Kernel Lock – Reduces latency of the kernel on desktop computers. – [*] Interrupt pipeline – Prevent data disturbances – !![ ] Local APIC support on uni processors – MUST be deactivated or the error RTAI[hal]:ERROR, LOCAL APIC CONFIGURED BUT NOT AVAILABLE/ENABLED will show when running RTAI apps. – [*] Math emulation – Emulates co-processor for loading point operations on old CPU’s. – [*] MTRR support – !![ ] Use register arguments – this MUST be deactivated. – [*] Compact VDSO support • Power management options -> – [*] Legacy Management Debug Support – ACPI Support –> * [*] ACPI Support – Advanced Configuration and Power Interface support. * [M] Button * [M] Video * [M] Fan * [M] Processor * [M] Thermal Zone – CPU Frequency Scaling –> * [*] CPU Frequency scaling – Allows to change the clock frequency of the CPU on the fly. * [*] Relaxed speedstep capability checks – Does not perform all checks for speed up. 
+• Bus options -> – [*] PCI Support 
+• Executable file formats -> – [*] Kernel support for ELD binaries • Networking -> – Networking Options –> * [*] Packet socket: mapped IO – Speed up communications.
+* [*] Unix domain sockets – Support UNIX sockets. * [*] TCP/IP networking – And all this option’s derivatives will be marked. * [*] Network packet filtering * [*]QoS and/or fair queueing 
+• Device Drivers -> – Generic Driver Options –> * [*] Prevent firmware from being built. * [*] User space firmware loading support. – Memory Technology Devices (MTD) –> * [*] Write support for NFTL. – Plug and Play support –> * [*] Plug and Play support. The rest of the options use the default configuration of the running kernel. 
+• File Systems – Default configuration used. 
+• Kernel Hacking -> – !! [ ] Compile the kernel with frame pointers – MUST be deactivated The rest of the options use the default configuration of the running kernel. 
+• Security options – Default configuration used. 
+• Cryptographic options – Default configuration used. 
+• Library routines – Default configuration used.
+Este proceso es complejo y requiere que conozca su hardware si desea optimizar el rendimiento del kernel. La configuración presentada debería funcionar en cualquier computadora de escritorio equipada con una CPU x86, y todos los servicios básicos, como USB, redes inalámbricas y por cable, etc., están disponibles.
+Esta configuración resultó en un archivo vmlinuz-2.6.19-rtai del kernel comprimido vmlinuz de 1.396 MB y un archivo initrd kernel de initrd.img-2.6.19-rtai de 5.140 MB para arrancar el kernel vmlinuz desde el dispositivo de disco duro SCSI. Muy bien, ¿eh?
+Compiling the kernel
+Después de configurar el kernel, tenemos que ir al proceso de compilación. Para la distribución de Ubuntu, la mejor forma de instalar el kernel es compilarlo y crear un archivo de instalación * .deb. Para esto, se necesitan algunos paquetes de software.
+# apt-get install kernel-package fakeroot
+Now, the following commands should be run to clean and compile the kernel. # make-kpkg clean # fakeroot make-kpkg --initrd --app\end-to-version=-rtai \kernel_image kernel\_headers
+Este proceso puede tardar horas en completarse. En el sistema de PC RAC, se necesitan aproximadamente 2 horas.
+Cuando el proceso haya finalizado, debería ver una línea como echo echo. Ahora es el momento de instalar los dos paquetes * .deb que se crean en la carpeta / usr / src por el proceso de compilación.
+# cd /usr/src 
+# dpkg -i *.deb
+Después de que el programa dpkg finaliza la instalación, se agregará una nueva entrada en "menu.lst" del grub. Entonces, si reiniciamos el sistema, esta nueva entrada arrancará el sistema Linux con nuestro nuevo kernel.
+The embedded style
+Tuve un problema al arrancar el kernel nuevo, la pantalla de inicio de Xubuntu no apareció durante el arranque. La pantalla se puso negra al arrancar el sistema hasta que se carga el administrador de escritorio Xfce. Para el sistema integrado que apuntaré más, no necesito que Xfce ni la pantalla de inicio se carguen al inicio, así que hice lo siguiente:
+1. Reboot and select the second option of the grub bootloader : Ubuntu, kernel 2.6.19-rtai (recovery mode). 
+2. Open the grub menu.lst with nano: # nano /boot/grub/menu.lst 
+3. Remove ”quiet splash“ after the ”ro“ directive of the kernel line on our new kernel entry. 
+4. Press CTRL+X and then press ”Y“ and ENTER. 
+5. Reboot # reboot
+Si sucediera lo mismo en su caso, ahora debería ver el proceso de arranque en la línea de comando. Para mí esto encaja mejor, ya que quiero ver todo el proceso de arranque.
+Ahora, quería eliminar el inicio de XFCE ya que todos los dispositivos están cargados. Para esto, hice lo siguiente,
+update-rc.d -f gdm remove
+Y finalmente, tengo una pantalla de inicio por línea de comando y ninguna X iniciada involuntariamente. Sin embargo, tenga en cuenta que puede iniciar sesión en la línea de comandos y luego escribir "xstart" para iniciar la X.
+Configuring RTAI
+Si se completan los pasos anteriores, inicie su nuevo kernel. Ahora, ingrese la carpeta rtai-3.5 y cree una nueva para la compilación:
+$ sudo -s # cd /usr/src/rtai-3.5 
+# mkdir build
+ # cd build 
+Now lets configure the RTAI. 
+# make -f ../makefile CC=/usr/bin/gcc-3.4 CXX=/usr/bin/g++-3.4
+The following options should be verified in the ncurses menu that will show up:
+ • General -> Installation directory – Leave the default as /usr/realtime 
+• General -> Linux Build Tree – The path to the configured kernel /usr/src/linux-2.6.9
+ All set, now just exit and reply YES to save your configuration. Now, install RTAI: 
+# make install
+Now reboot your computer and boot our new kernel with RTAI installed
+Testing the installation
+Para que las cosas funcionen, deberá ejecutar una secuencia de comandos en el inicio de Ubuntu que enlazará las carpetas que no se crean ni se vinculan a medida que la RTAI se instala (¿ERROR?). Para esto, haga "startx" si se encuentra en el símbolo del sistema para iniciar Xfce. El administrador de escritorio le permitirá copiar y pegar los scripts.
+Haz lo siguiente:
+1. Run “sudo -s“ to gain root privileges. 
+2. run mousepad or any text editor you like. 
+3. Copy and paste the following code on it.
+#!/bin/bash 
+mkdir /dev/rtf for n in ‘seq 0 9‘
+ do
+ f=/dev/rtf/$n
+ mknod -m 666 $f c 150 $n 
+done
+4. Save it in your home folder /home/Your User Name with the name rt script 
+5. Go to the home directory: # cd /home/Your_User_Name 
+6. Set the rt script file executable: # chmod +x rt_script 
+7. Run the script # ./rt_script
+Esto creará los directorios rtf0..rtf9 que, por razones desconocidas, no son creados por RTAI pero que son necesarios para ello. Ahora necesitará ejecutar un script en el inicio de Ubuntu que creará los nodos en estas carpetas.
+1. Run mousepad or any other text editor. 
+2. Copy and paste the following code on it.
+ #!/bin/bash 
+mknod -m 666 /dev/rtai_shm c 10 254 
+for n in ‘seq 0 9‘ 
+do
+ f=/dev/rtf$n 
+mknod -m 666 $f c 150 $n 
+done 
+3. Save it in /etc/init.d/ with the name start rt 4. Make the script executable: # chmod +x /etc/init.d/start_rt
+ 5. Make it run on startup
+sudo update-rc.d start_rt start 51 S
+NOTA: No olvide el punto al final del comando anterior. Esta secuencia de comandos hará que los nodos al inicio del sistema, por lo que no tiene que hacerlo una y otra vez. En algunos casos, este problema no ocurre pero, como me sucedió a mí, sentí la necesidad de compartir esto. El síntoma era algo así como "Error: No se puede abrir / dev / rtf3" cuando se ejecuta la aplicación de prueba en tiempo real.
+Ahora deberás cargar el módulo rtai hal.ko:
+# cd /usr/realtime/testsuite/modules # insmod rtai_hal.ko
+If everything goes OK, there should be no output messages after the insmod command. It’s time to finally test our installation. For this, do the following:
+ # cd /usr/realtime/testsuite/kern/cd latency 
+# ./run If everything is correctly installed, you should see something like, 
+## RTAI latency calibration tool ##
+ # period = 100000 (ns) 
+# avrgtime = 1 (s)
+ # do not use the FPU 
+# start the timer 
+# timer_mode is oneshot
+RTAI Testsuite - KERNEL latency (all data in nanoseconds) 
+RTH| 	lat min| 	ovl min| 	lat avg| 	lat max| 	ovl max| 	overruns 
+RTD| 	-628| 		-628| 		1625| 		10933| 	10933|		 0 
+RTD| 	805|		 -628| 		1609| 		13756| 	13756|		 0 
+RTD| 	-781| 		-781| 		1622| 		17424| 	17424|		 0
+
+

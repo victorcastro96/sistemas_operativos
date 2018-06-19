@@ -1,0 +1,200 @@
+Linux es un sistema multitareas. La desventaja de Linux es que no puede garantizar
+la respuesta en el tiempo de los procesos. Sin embargo hay áreas, donde las
+aplicaciones requieren respuesta en tiempo real, como dispositivos robóticos,
+computadoras usadas en el control de la salud y en aplicaciones militares, y varios
+sistemas integrados que usan diferentes tipos de dispositivos.
+Existen varios sistemas operativos de tiempo real comerciales disponibles, como
+QNX, AMX, RTKernel, los cuales son más pequeños y convienen generalmente ser
+usados en sistemas integrados. Sin embargo, algunos desarrolladores y
+investigadores han señalado que si bien hay necesidades para un núcleo de tiempo
+real, sería útil disponer de varios drivers de dispositivos, protocolos de redes, y
+otras características ofrecidas y disponibles en Linux. 
+
+RTlinux
+inserta un pequeño kernel de tiempo real abajo del estándar kernel de Linux y trata
+al kernel de Linux como un proceso de tiempo real. La desventaja de este enfoque
+es que las tareas de tiempo real operan en un espacio de kernel y en el caso de un
+bug del software podría causar daños considerables.
+
+Una solución basada en RTlinux es Real time Application Interface (RTAI)
+desarrollado en la politécnica de Milán, en el departamento de ingeniería
+Aeroespacial. De las soluciones de Linux de tiempo real disponibles, es la más
+activamente actualizada y mantenida. Las características más importantes de RTAI
+incluye varios métodos de comunicación flexible entre procesos, y un API simétrico
+permitiendo la creación de de tareas en tiempo real en el espacio de usuario,
+evitando la desventaja de operación en el espacio de kernel.
+
+RTAI es una implementación de Linux para tiempo real basada en RTLinux. Añade
+un pequeño kernel de tiempo real bajo el kernel estándar de Linux y trata al kernel
+de Linux como una tarea con la menor prioridad. RTAI además proporciona una
+amplia selección de mecanismos de comunicación entre procesos y otros servicios
+de tiempo real.
+
+RTAI provee garantía de una programación de tiempo real, pero conserva todas las
+características y servicios del Linux estándar. Adicionalmente, RTAI proporciona un
+módulo llamado LXRT para facilitar el desarrollo de aplicaciones de tiempo real en
+el espacio de usuario.
+
+3- Fundamentos del RTAI.
+RTAI tiene una arquitectura similar a RTLinux. Al igual que RTLinux, RTAI trata el
+kernel estándar de Linux como una tarea de tiempo real con la menor prioridad, lo 
+que hace posible que se ejecute cuando no haya ninguna tarea con mayor
+prioridad ejecutándose. Las operaciones básicas de las tareas de tiempo real son
+implementadas como módulos del kernel al igual que RTLinux. RTAI maneja las
+interrupciones de periféricos y son atendidas por el kernel de Linux después de las
+posibles acciones de tiempo real que hayan podido ser lanzadas por efecto de la
+interrupción.
+
+Así, Linux no sufre cambios en su operación desde el punto de vista del usuario o el
+kernel de Linux, salvo que esté autorizada a ejecutar sólo cuando no hay tareas en
+tiempo real de ejecución.
+
+RTAI
+envía las interrupciones a los manejadores del kernel estándar de linux cuando no
+hay tareas de tiempo real activas. Las instrucciones de activar/desactivar las
+interrupciones del kernel estándar son reemplazadas por macros que se enlazan
+con las instrucciones de RTAI. Cuando las interrupciones están desactivadas en el
+kernel estándar, RTAI encola las interrupciones para ser repartidas después de que
+el kernel estándar haya activado las interrupciones de nuevo.
+
+4- HAL - Hardware Abstraction Layer.
+Los desarrolladores de RTAI introducen el concepto de Real Time Hardware
+Abstraction Layer (RTHAL) que es usado para interceptar las interrupciones
+hardware y procesarlas después. RTHAL es una estructura instalada en el kernel de
+Linux que reúne los punteros a los datos internos del hardware relacionados en el
+kernel y las funciones necesarias por RTAI para operar. El objetivo de RTHAL es
+minimizar el número de cambios necesarios sobre el código del kernel y por tanto
+mejorar el mantenimiento de RTAI y del código del kernel de Linux. Con RTHAL, las
+diferentes operaciones (ej. manejar interrupciones) son más fáciles de cambiar y
+modificar sin tener que interferir con la implementación de Linux. Por ejemplo, la
+estructura de RTHAL contiene la tabla de manejadores de interrupción, la cual es
+una lista de las funciones que son llamadas para manejar las diferentes
+interrupciones. El cambio consiste únicamente en modificar unas 20 líneas del
+código del kernel de Linux y añadir unas 50 nuevas líneas.
+Cuando RTHAL es instalado en Linux, las funciones y las estructuras de datos
+relacionada con la interacción con el hardware son reemplazadas por punteros a la
+estructura de RTHAL.
+
+5- Planificación.
+La unidad de planificación de RTAI es la tarea. Siempre hay al menos una tarea,
+llamada kernel de Linux, que ejecuta como la tarea de menor prioridad. Cuando las 
+tareas de tiempo real son añadidas, el planificador da entonces mayor prioridad a
+éstas sobre la tarea del kernel de Linux. El planificador proporciona servicios tales
+como suspend, resume, yield, make periodic, wait until, que son usadas en varios
+sistemas operativos de tiempo real.
+
+El planificador es implementado como un módulo del kernel dedicado (contrario a
+RTLinux) lo que facilita la implementación de planificadores alternativos si es
+necesario. Actualmente hay tres tipos de planificadores dependiendo del tipo de
+máquina:
+? Uniprocesador (UP).
+El planificador Uniproceso realiza un algoritmo de programación para seleccionar la
+tarea que se va a ejecutar en un CPU. Como tal su funcionamiento es muy sencillo:
+cualquier proceso tiene una prioridad alta de tomar la CPU. En efecto es una lista
+de múltiple prioridades programada con soporte para herencia prioritaria. En este
+esquema Linux es una tarea de tiempo real, como cualquier otro pero
+manteniendo el nivel de menor prioridad.
+
+Multiprocesador simétrico (SMP).
+Está diseñado para maquinas SMP y proporciona un interfaz para las aplicaciones
+de forma que es posible seleccionar el procesador y procesadores que deben
+ejecutar una tarea. Si el usuario no especifica un procesador para la tarea, SMP
+selecciona el procesador en función de la carga de trabajo.
+? Multi-Uniprocesador (MUP)
+Puede ser usado con ambos, pero al contrario que SMP, a las tareas se les debe
+especificar el procesador que deben usar. Viéndolo por el lado positivo, el
+planificador MUP permite unos mecanismos de tiempo más flexibles para las
+tareas que los planificadores SMP y UP.
+
+6.1- Comunicación entre procesos (IPC - Inter-process comunication).
+RTAI proporciona una variedad de mecanismos para la comunicación entre
+procesos. Aunque los sistemas Unix proporcionan mecanismos similares a IPC para
+los procesos en el espacio de usuario, RTAI necesita proporcionar una
+implementación propia para que las tareas de tiempo real puedan usar este
+mecanismo y no usen el estándar del kernel de Linux. Los diferentes mecanismos
+de IPC están incluidos como módulos de kernel, lo que facilita la carga cuando son
+necesarios. Como ventaja adicional el uso de módulos para los servicios, IPC facilita
+el mantenimiento y la expansión.
+
+inalmente, el método más flexible de IPC quizá sean los mailboxes. Cualquier
+número de procesos pueden enviar y recibir mensaje de y desde un mailbox. Un
+mailbox almacena mensajes hasta un límite que se defina, y contrario a los FIFOs,
+mailbox preserva los mensajes que están en el límite. Puede haber un número
+arbitrario de mailbox activos en el sistema simultáneamente. RTAI también facilita
+la comunicación entre procesos mediante RPC.
+
+6.2 - Gestión de memoria
+
+RTAI pre asigna trozos de memoria antes de la ejecución de tiempo real. Cuando la
+tarea de tiempo real llama a la función rt_malloc(), la respuesta que obtiene es el
+trozo pre asignado. Antes de que el espacio se agote, RTAI reserva nuevos trozos
+de memoria (pre asigna) para futuras llamadas. De manera similar ocurre con la
+función rt_free(), en este caso, se libera la memoria pre asignada a la espera de
+futuras reservas. Cuando la suma de memoria liberada es mayor que un valor para
+una marca, se ordena su liberación.
+
+6.4 - LXRT: User-space Interface to RTAI.
+LXRT es un API para RTAI que hace posible el desarrollo de aplicaciones de tiempo
+real en el espacio de usuario sin tener que crear módulos para el kernel. Esto es útil
+en primer lugar porque el espacio de memoria destinado al kernel no está
+protegido de accesos inválidos, lo que puede provocar la corrupción de datos y el
+mal funcionamiento del kernel de Linux. En segundo lugar, si el kernel es
+actualizado, los módulos necesitan ser recompilados lo que puede provocar que
+sean incompatibles con la nueva versión.
+
+La ventaja de esto es que cuando la aplicación
+está libre de errores puede convertirse a un módulo en el espacio del kernel, por lo
+que ya tendremos una tarea de tiempo real estricto. Sin embargo, al hacer esto, las
+llamadas al sistema utilizadas no sirven y deberán ser cambiadas por las
+proporcionadas por RTAI.
+
+El cambio de la aplicación de procesos del espacio de usuario a tareas de tiempo
+real es fácil porque LXRT proporciona un API simétrico para la comunicación entre
+procesos y otros servicios de RTAI, lo que significa que el mismo API puede ser
+usado por las tareas de tiempo real y por los procesos del espacio de usuario. El
+mismo API de LXRT puede ser también usado cuando 2 procesos del espacio de
+usuario y 2 tareas de tiempo real se comunican entre sí, esto implica que varios
+relojes y mensajes del sistema proporcionados por LXRT puedan ser usados incluso
+cuando la aplicación no requiera tiempo real.
+
+LXRT permite a las aplicaciones el intercambio dinámico entre tiempo real flexible y
+estricto mediante el uso de una simple llamada en el espacio de usuario. Cuando
+una aplicación esta en el modo de tiempo real flexible, usa el planificador de Linux,
+pero requiere el uso de la política de planificación FIFO. Sin embargo la
+planificación de procesos FIFO puede provocar la pérdida de ranuras de tiempo por 
+varias razones, por ejemplo, porque se está ejecutando un manejador de
+interrupciones y el planificador de tareas de RTAI.
+
+Para poder realizar este cambio el
+proceso debe asegurar que la memoria usada por el proceso este en la memoria
+RAM y debe desactivar la paginación usando la función mlockall(). Esta llamada no
+debe ser usada en modo tiempo real estricto.
+
+Diferencia entre RTAI y otros sistemas.
+Tenemos que saber que el RTAI no es un sistema sino que es una función que nos permite Linux en
+realizar tareas en tiempo real.
+Primero debemos saber que son sistemas operativos en tiempo real.
+Un sistema operativo de tiempo real (RTOS -Real Time Operating System en inglés). Como tal, se le
+exige corrección en sus respuestas bajo ciertas restricciones de tiempo. Si no las respeta, se dirá
+que el sistema ha fallado. Para garantizar el comportamiento correcto en el tiempo requerido se
+necesita que el sistema sea predecible. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

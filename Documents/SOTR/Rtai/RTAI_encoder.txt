@@ -1,0 +1,204 @@
+Makefile
+
+-------------------------------------------------------------------
+obj-m    := ktest_encoder.o
+
+KDIR    := /lib/modules/$(shell uname -r)/build
+PWD     := $(shell pwd)
+EXTRA_CFLAGS := -I/usr/realtime/include -I/usr/include/ -ffast-math -mhard-float
+
+default:
+$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
+gcc -o utest_encoder utest_encoder.c
+-------------------------------------------------------------------
+
+
+
+.runinfo
+
+-------------------------------------------------------------------
+latency:ksched+fifos:push ktest_encoder;./utest_encoder;popall:control_c
+ -------------------------------------------------------------------
+
+
+ktest_encoder.c
+
+/*----------------------------------------------------------
+Descripción:
+Se ejecuta 1 tarea denominada ENCODER.
+Lee los canales A y B (chA y chB) y almacena los valores actuales
+y anteriores del encoder en los vectores A y B para incrementar
+o decrementar la variable x que especifica la posicion angular del motor.
+----------------------------------------------------------*/
+
+/* includes*/
+#include <linux>
+#include <linux>
+#include <asm.h>
+#include <math.h>
+#include <rtai.h>
+#include <rtai_sched.h>
+#include <rtai_fifos.h>
+/* defines*/
+#define TICK_PERIOD 50000                        //50 useg de periodo
+#define TASK_PRIORITY 0
+#define STACK_SIZE 10000
+#define FIFO 0
+
+#define BASEPORT 0x300                            //Dirección Base de la placa adquisidora
+
+/* globals */
+static RT_TASK rt_task3;
+
+/********************************************************
+*    FUNCION:        encoder
+*
+*    Descripcion:        Tarea de lectura del encoder.
+*
+*    Esta rutina lee los canales IN0 e IN1 (pin31 y 30) como canales A y B, respectivamente.
+*    Compara el estado de cada canal cada 50 useg ya que no posee interrupciones y
+*    luego incrementa o decrementa el acumulador de pulsos.
+*********************************************************/
+static void encoder(int t)
+{
+unsigned char chA=0, chB=0, entrada=0;        //canales A y B , mas la mascara del puerto de entradas discretas
+unsigned int A[2] = {0,0};                        //Vector para comparar el valor actual y anterior del canal A
+unsigned int B[2] = {0,0};                        //Idem
+int x=0;                                            //Acumulador de pulsos
+
+entrada=inb( BASEPORT);
+chA = entrada & 0x01;                            //Lee IN 0 - Pin 31
+chB = entrada & 0x02;                            //Lee IN 1 - Pin 30
+A[0] = ( unsigned int )chA;                    //Inicializa canales de entrada
+B[0] = ( unsigned int )chB;
+
+rtf_reset(FIFO);
+
+
+while(1)
+{
+
+entrada=inb( BASEPORT);
+
+chA = entrada & 0x01;
+chB = entrada & 0x02;
+chB = chB/2;
+
+A[1] = ( unsigned int )chA;
+B[1] = ( unsigned int )chB;
+
+if((A[1] & B[1]))                            //Ejecutar solo si A[1] = B[1] = 1
+{
+if( ((A[1]^A[0]) | (B[1]^B[0])) )    //si hubo cambio de estado para A o B,  Incr o Decr
+             {
+  if((A[1]^B[0])) x++;                // Si A[1] xor B[0] = 1 incrementa
+  else
+                     {
+                     if(x>0) x--;                        // De otra forma decrementa
+                     else x=0;
+                     }
+             }
+     }
+
+A[0]=A[1];                                    //Actualiza valores
+B[0]=B[1];
+
+rtf_put(FIFO, &x, sizeof(x));            //Coloca en el FIFO para Proceso usuario
+
+rt_task_wait_period();
+}
+
+}
+
+/********************************************************
+*    FUNCION:        init_module
+*
+*    Descripcion:        Inicializa el modulo.
+*
+*    Inicializa tarea de tiempo real, establece modo periódico,
+*    crea FIFO e inicia temporizador.
+*********************************************************/
+int init_module(void)
+{
+RTIME tick_period;
+
+rt_set_periodic_mode();
+
+rt_task_init(&rt_task3, encoder, 1, STACK_SIZE, TASK_PRIORITY, 0, 0);
+//tarea, funcion,valor inicial, tamaño stack, prioridad, usa FPU, usa Signal Handler.
+
+rtf_create(FIFO, 10);
+
+tick_period = start_rt_timer(nano2count(TICK_PERIOD));
+
+rt_task_make_periodic(&rt_task3, rt_get_time() + tick_period, tick_period);
+
+return 0;
+}
+
+/********************************************************
+*    FUNCION:        cleanup_module
+*
+*    Descripcion:        Libera el modulo.
+*
+*    Detiene temporizador, destruye FIFO y elimina tarea de tiempo real.
+*********************************************************/
+void cleanup_module(void)
+{
+stop_rt_timer();
+
+rt_busy_sleep(10000000);
+//recomendado
+
+rtf_destroy(FIFO);
+rt_task_delete(&rt_task3);
+return;
+}
+
+MODULE_AUTHOR("Elias S. Fliger, ");
+MODULE_DESCRIPTION("Proyecto BORA - RT test encoder - UNQ");
+MODULE_LICENSE("GPL");
+ -------------------------------------------------------------------
+
+utest_encoder.c
+
+-------------------------------------------------------------------
+/*
+Archivo: utest_encoder.c*/
+
+
+/*----------------------------------------------------------
+Descripción:
+El proceso solo recibe el valor del acumulador de pulsos
+obtenido en el modulo ktest_encoder y lo muestra en pantalla.
+Ejecutar ./utest_encoder
+----------------------------------------------------------*/
+/* includes*/
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+#include 
+
+/* defines*/
+#define BASEPORT 0x300
+//direccion base de la placa de adquisicion
+
+static int end;
+static void endme(int dummy)
+{
+end=1;
+}
+
+
+int main(int argc, char * argv[])
+{
+int fifo;
+int Contador;
+
+if ((fifo = open("/dev/rtf0", O_RDONLY))
+ -------------------------------------------------------------------
+
